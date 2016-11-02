@@ -3,11 +3,21 @@ using System.Collections;
 
 public class Teste : MonoBehaviour {
 
-    void OnTriggerEnter(Collider other) {
+    private float widthInWorld;
+    private float heightInWorld;
 
-        Debug.Log("Colidiu: " + other.tag);
+    void Start() {
 
+        heightInWorld = Camera.main.orthographicSize * 2;
+        widthInWorld = heightInWorld * Screen.width / Screen.height;
 
     }
 
+    void Update() {
+
+        Debug.Log(widthInWorld);
+
+
+    }
+  
 }

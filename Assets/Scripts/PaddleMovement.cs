@@ -4,8 +4,6 @@ using System.Collections;
 
 public class PaddleMovement : MonoBehaviour {
 
-    public LayerMask touchableObjectsMask;
-
     private RaycastHit2D hit;
     private Camera mainCamera;
 
@@ -14,18 +12,25 @@ public class PaddleMovement : MonoBehaviour {
     private Vector3 fingCurrPos;
     private Vector3 fingPrevPos;
 
-    private Vector3 paddlePosition;
-    private Transform parent;
+    //private Transform parent;
+
+    private bool insideLeftBound;
+    private bool insideRightBound;
+
+    public LayerMask touchableObjectsMask;
 
     void Start() {
 
         beingTouched = false;
         mainCamera = Camera.main;
-        parent = gameObject.transform.parent;
+        //parent = gameObject.transform.parent;
+
+        insideLeftBound = false;
+        insideRightBound = false;
 
     }
 
-    void Update() {
+    void FixedUpdate() {
 
         touchInput();
         //mouseInput();
@@ -34,8 +39,17 @@ public class PaddleMovement : MonoBehaviour {
 
             float distX = fingCurrPos.x - fingPrevPos.x;
 
-            paddlePosition = parent.GetComponent<Transform>().position;
-            parent.GetComponent<Transform>().position = new Vector3(paddlePosition.x + distX, paddlePosition.y, paddlePosition.z);
+            Vector3 paddlePosition = gameObject.GetComponent<Transform>().position;
+
+            if (distX < 0) {
+                if (!insideLeftBound)
+                    gameObject.GetComponent<Transform>().position = new Vector3(paddlePosition.x + distX, paddlePosition.y, paddlePosition.z);
+            }
+            else if (distX > 0) {
+                if(!insideRightBound)
+                    gameObject.GetComponent<Transform>().position = new Vector3(paddlePosition.x + distX, paddlePosition.y, paddlePosition.z);
+            }
+
             fingPrevPos = fingCurrPos;
 
         }
@@ -44,14 +58,14 @@ public class PaddleMovement : MonoBehaviour {
 
     private void touchInput() {
 
-        if (Input.touchCount > 0) {          
+        if (Input.touchCount > 0) {
 
             Touch touch = Input.touches[0];
 
             if (touch.phase == TouchPhase.Began) {
 
                 Vector2 ray = new Vector2(mainCamera.GetComponent<Camera>().ScreenToWorldPoint(touch.position).x,
-                                            mainCamera.GetComponent<Camera>().ScreenToWorldPoint(touch.position).y);
+                                          mainCamera.GetComponent<Camera>().ScreenToWorldPoint(touch.position).y);
 
                 hit = Physics2D.Raycast(ray, Vector2.zero, Mathf.Infinity, touchableObjectsMask);
 
@@ -75,7 +89,7 @@ public class PaddleMovement : MonoBehaviour {
             if (touch.phase == TouchPhase.Ended)
                 beingTouched = false;
 
-            if (touch.phase == TouchPhase.Moved || touch.phase == TouchPhase.Stationary) {
+            if (touch.phase == TouchPhase.Moved) {
                 Ray ray = mainCamera.GetComponent<Camera>().ScreenPointToRay(touch.position);
                 fingCurrPos = ray.GetPoint(0);
             }
@@ -128,5 +142,38 @@ public class PaddleMovement : MonoBehaviour {
 
     }
 
-}
+    void OnTriggerEnter(Collider other) {
 
+        Vector3 paddlePosition = gameObject.GetComponent<Transform>().position;
+
+        if (other.name == "BoundaryLeft") {
+
+            gameObject.transform.position = new Vector3((other.transform.position.x + other.transform.localScale.x / 2) + gameObject.transform.localScale.x * gameObject.GetComponent<CapsuleCollider>().height / 2,
+                                                         gameObject.transform.position.y, 
+                                                         gameObject.transform.position.z);
+            insideLeftBound = true;
+
+        }
+        else if (other.name == "BoundaryRight") {
+
+            gameObject.transform.position = new Vector3((other.transform.position.x - other.transform.localScale.x / 2) - gameObject.transform.localScale.x * gameObject.GetComponent<CapsuleCollider>().height / 2,
+                                                         gameObject.transform.position.y,
+                                                         gameObject.transform.position.z);
+
+
+            insideRightBound = true;
+
+        }
+
+    }
+
+    void OnTriggerExit(Collider other) {
+
+        if (other.name == "BoundaryLeft")
+            insideLeftBound = false;
+        else if (other.name == "BoundaryRight")
+            insideRightBound = false;
+
+    }
+
+}   
