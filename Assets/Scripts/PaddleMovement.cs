@@ -7,7 +7,7 @@ public class PaddleMovement : MonoBehaviour {
     private RaycastHit2D hit;
     private Camera mainCamera;
 
-    private bool beingTouched;
+    public bool beingTouched;
 
     private Vector3 fingCurrPos;
     private Vector3 fingPrevPos;
@@ -90,13 +90,13 @@ public class PaddleMovement : MonoBehaviour {
                 beingTouched = false;
 
             if (touch.phase == TouchPhase.Moved) {
+
                 Ray ray = mainCamera.GetComponent<Camera>().ScreenPointToRay(touch.position);
                 fingCurrPos = ray.GetPoint(0);
+
             }
 
-
         }
-
 
     }
 
@@ -159,7 +159,6 @@ public class PaddleMovement : MonoBehaviour {
             gameObject.transform.position = new Vector3((other.transform.position.x - other.transform.localScale.x / 2) - gameObject.transform.localScale.x * gameObject.GetComponent<CapsuleCollider>().height / 2,
                                                          gameObject.transform.position.y,
                                                          gameObject.transform.position.z);
-
 
             insideRightBound = true;
 

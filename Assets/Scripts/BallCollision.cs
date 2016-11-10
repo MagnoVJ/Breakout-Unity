@@ -3,7 +3,8 @@ using System.Collections;
 
 public class BallCollision : MonoBehaviour {
 
-    private Vector3 realSpeed;
+    [HideInInspector]
+    public Vector3 realSpeed;
 
     private new Rigidbody rigidbody;
     private SphereCollider sphereCollider;
@@ -13,13 +14,16 @@ public class BallCollision : MonoBehaviour {
     private Vector3 initialChildPos;
 
     private RaycastHit[] rayHit;
+    private RaycastHit sHit;
     private int minDistObjIndex;
     private float minDist;
-    private RaycastHit sHit;
 
     public float rawSpeed;
-    public Vector3 direction;
     public int resolution;
+
+    public Vector3 direction;
+    [HideInInspector]
+    public Vector3 directionDefault;
     public LayerMask collidable;
 
     bool stuckToInv = false;
@@ -40,29 +44,22 @@ public class BallCollision : MonoBehaviour {
         sphereCollider.radius = transform.GetChild(0).localScale.x / 2.0f;
 
         direction = direction.normalized;
+        directionDefault = direction;
 
         realSpeed = rawSpeed * direction;
 
         radius = sphereCollider.radius;
 
+        minDistObjIndex = -1;
+        minDist = Mathf.Infinity;
+
         sHit = new RaycastHit();
 
-        StartCoroutine(Begin());
-
     }
 
-    IEnumerator Begin() {
+    void FixedUpdate() {
 
-        yield return new WaitForSeconds(1.0f);
-
-        rigidbody.velocity = realSpeed;
-
-    }
-
-
-    void Update() {
-
-        if (!stuckToInv) {
+        if (!stuckToInv && !FindObjectOfType<BallScript>().ballStuck) {
 
             Vector3 origin = transform.GetChild(0).position;
             Vector3 originAux = origin;
@@ -117,13 +114,15 @@ public class BallCollision : MonoBehaviour {
 
                 case 0:
                 case 1:
-                direction = new Vector3(-direction.x, direction.y, direction.z);
-                break;
-
+                    direction = new Vector3(-direction.x, direction.y, direction.z);
+                    break;
                 case 2:
+                    direction = new Vector3(direction.x, -direction.y, direction.z);
+                    break;
                 case 3:
-                direction = new Vector3(direction.x, -direction.y, direction.z);
-                break;
+                    rigidbody.velocity = Vector3.zero;
+                    GameController.ResetPosition();
+                    break;
 
                 }
 
@@ -133,6 +132,52 @@ public class BallCollision : MonoBehaviour {
                 minDistObjIndex = -1; //Se não stuckToInv seria reiniciado novamente para true;
 
             }
+            else if (rayHit[minDistObjIndex].transform.CompareTag("Player")) {
+
+                Vector3 colliderPos = rayHit[minDistObjIndex].transform.GetComponent<CapsuleCollider>().center;
+                Vector3 hitPoint = rayHit[minDistObjIndex].point;
+                Vector3 childPlayerGraphPos = rayHit[minDistObjIndex].transform.GetChild(0).position;
+                float capsRadius = rayHit[minDistObjIndex].transform.GetComponent<CapsuleCollider>().radius;
+                float capsHeight = rayHit[minDistObjIndex].transform.GetComponent<CapsuleCollider>().height;
+
+                //Acertou topo do collider
+                if (System.Math.Round(hitPoint.y, 5) == System.Math.Round(colliderPos.y + capsRadius, 5))
+                    direction = new Vector3(direction.x, -direction.y, direction.z);
+                //Acertou a borda do paddle
+                else if (System.Math.Round(hitPoint.y, 5) < System.Math.Round(colliderPos.y + capsRadius, 5) && System.Math.Round(hitPoint.y, 5) >= System.Math.Round(colliderPos.y, 5)) {
+
+                    Vector3 rightSidePad = new Vector3(childPlayerGraphPos.x + capsHeight / 2, childPlayerGraphPos.y, childPlayerGraphPos.z);
+                    Vector3 leftSidePad = new Vector3(childPlayerGraphPos.x - capsHeight / 2, childPlayerGraphPos.y, childPlayerGraphPos.z);
+
+                    if (Vector3.Distance(hitPoint, rightSidePad) < Vector3.Distance(hitPoint, leftSidePad)) {
+
+                        if (direction.x < 0)
+                            direction = new Vector3(-direction.x, -direction.y, direction.z);
+                        else
+                            direction = new Vector3(direction.x, -direction.y, direction.z);
+
+                    }
+                    else {
+
+                        if(direction.x < 0)
+                            direction = new Vector3(direction.x, -direction.y, direction.z);
+                        else
+                            direction = new Vector3(-direction.x, -direction.y, direction.z);
+
+                    }
+
+                }
+                //Acertou a borda de baixo do paddle
+                else if (System.Math.Round(hitPoint.y, 5) < System.Math.Round(colliderPos.y, 5))
+                    direction = new Vector3(-direction.x, direction.y, direction.z);
+
+                realSpeed = rawSpeed * direction;
+                stuckToInv = false;
+                restartVelocity = true;
+                minDistObjIndex = -1; //Se não stuckToInv seria reiniciado novamente para true;
+
+            }
+            
         }
 
         if (minDistObjIndex != -1) {
